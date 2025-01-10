@@ -35,15 +35,29 @@ const LangContext = createContext();
 function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
 
-  const login = (username, password) => {
-    const storedUsername = 'admin';
-    const storedPassword = 'password123';
+  const register = (username, password) => {
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const userExists = users.some(user => user.username === username);
 
-    if (username === storedUsername && password === storedPassword) {
+    if (userExists) {
+      return { success: false, message: 'El usuario ya existe.' };
+    }
+
+    users.push({ username, password });
+    localStorage.setItem('users', JSON.stringify(users));
+    return { success: true, message: 'Usuario registrado exitosamente.' };
+  };
+
+  const login = (username, password) => {
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const user = users.find(user => user.username === username && user.password === password);
+
+    if (user) {
       localStorage.setItem('user', username);
       setIsLoggedIn(true);
       return true;
     }
+
     return false;
   };
 
@@ -53,9 +67,52 @@ function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, login, logout, register }}>
       {children}
     </AuthContext.Provider>
+  );
+}
+
+
+function RegisterComponent() {
+  const { register } = useAuth();
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const username = e.target.username.value;
+    const password = e.target.password.value;
+
+    const result = register(username, password);
+    setMessage(result.message);
+
+    if (result.success) {
+      setShowRegisterDialog(false);
+    }
+  };
+
+  return (
+    <div className="register-container">
+      <button className="register-btn" onClick={() => setShowRegisterDialog(true)}>
+        Registrarse
+      </button>
+
+      {showRegisterDialog && (
+        <dialog open>
+          <form onSubmit={handleRegister}>
+            <h2>Registrarse</h2>
+            <input type="text" name="username" placeholder="Usuario" required />
+            <input type="password" name="password" placeholder="Contraseña" required />
+            <button type="submit">Registrar</button>
+            <button type="button" className="close-btn" onClick={() => setShowRegisterDialog(false)}>
+              Cancelar
+            </button>
+            {message && <p>{message}</p>}
+          </form>
+        </dialog>
+      )}
+    </div>
   );
 }
 
@@ -87,14 +144,21 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <header>
+            <div className="date-container">
+              <DateDisplay/>
+              <LanguageSelector />
+            </div>
+
             <div className="logo-container">
               <img src="logo.jpg" alt="Website Logo" className="logo" />
+            </div>
+            <div className="header-right">
+              <RegisterComponent />
             </div>
             <nav>
               <NavigationLinks />
               <SearchComponent />
               <ProfileComponent />
-              <LanguageSelector />
 
             </nav>
           </header>
@@ -107,6 +171,22 @@ function App() {
         </BrowserRouter>
       </AuthProvider>
     </LangProvider>
+  );
+}
+
+function DateDisplay() {
+  const today = new Date();
+  const formattedDate = new Intl.DateTimeFormat('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(today);
+
+  return (
+    <div className="date-display">
+      {formattedDate}
+    </div>
   );
 }
 function LanguageSelector() {
@@ -218,9 +298,11 @@ function ProfileComponent() {
           Cerrar sesión
         </button>
       ) : (
-        <button className="login-btn" onClick={() => setShowLoginDialog(true)}>
-          Iniciar sesión
-        </button>
+        <>
+          <button className="login-btn" onClick={() => setShowLoginDialog(true)}>
+            Iniciar sesión
+          </button>
+        </>
       )}
 
       {showLoginDialog && (
@@ -239,6 +321,7 @@ function ProfileComponent() {
     </div>
   );
 }
+
 
 function Home() {
   const { language } = useLang();
