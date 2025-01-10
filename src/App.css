@@ -267,7 +267,7 @@ dialog {
 
 .login-btn,
 .logout-btn {
-  background-color: #007bff;
+  background-color: #000000;
   color: white;
   border: none;
   padding: 10px 15px;
@@ -279,7 +279,7 @@ dialog {
 
 .login-btn:hover,
 .logout-btn:hover {
-  background-color: #0056b3;
+  background-color: #141414;
 }
 
 /* Dialog for login */
@@ -367,7 +367,7 @@ dialog button[type="submit"]:hover {
 }
 
 .register-btn {
-  background-color: gray;
+  background-color: rgb(0, 0, 0);
   color: white;
   border: none;
   padding: 5px 10px;
