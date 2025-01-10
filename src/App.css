@@ -339,3 +339,15 @@ dialog button[type="submit"]:hover {
 .close-btn:hover {
   background-color: #d32f2f;
 }
+
+.language-selector {
+  margin-left: 20px;
+}
+
+.language-selector select {
+  padding: 5px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
