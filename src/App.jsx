@@ -31,6 +31,7 @@ const translations = {
 
 const AuthContext = createContext();
 const LangContext = createContext();
+const BookmarkContext = createContext();
 
 function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('user'));
@@ -71,50 +72,43 @@ function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
+}function BookmarkProvider({ children }) {
+  const { isLoggedIn } = useAuth();
+  const [bookmarks, setBookmarks] = useState([]);
 
-
-function RegisterComponent() {
-  const { register } = useAuth();
-  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
-  const [message, setMessage] = useState('');
-
-  const handleRegister = (e) => {
-    e.preventDefault();
-    const username = e.target.username.value;
-    const password = e.target.password.value;
-
-    const result = register(username, password);
-    setMessage(result.message);
-
-    if (result.success) {
-      setShowRegisterDialog(false);
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const savedBookmarks = JSON.parse(localStorage.getItem(`bookmarks_${user}`)) || [];
+      setBookmarks(savedBookmarks);
+    } else {
+      setBookmarks([]);
     }
+  }, [isLoggedIn]);
+
+  const toggleBookmark = (articleId) => {
+    const user = localStorage.getItem('user');
+    if (!user) return;
+
+    setBookmarks((prev) => {
+      const isBookmarked = prev.includes(articleId);
+      const updatedBookmarks = isBookmarked
+        ? prev.filter((id) => id !== articleId)
+        : [...prev, articleId];
+
+      localStorage.setItem(`bookmarks_${user}`, JSON.stringify(updatedBookmarks));
+      return updatedBookmarks;
+    });
   };
 
   return (
-    <div className="register-container">
-      <button className="register-btn" onClick={() => setShowRegisterDialog(true)}>
-        Registrarse
-      </button>
-
-      {showRegisterDialog && (
-        <dialog open>
-          <form onSubmit={handleRegister}>
-            <h2>Registrarse</h2>
-            <input type="text" name="username" placeholder="Usuario" required />
-            <input type="password" name="password" placeholder="Contraseña" required />
-            <button type="submit">Registrar</button>
-            <button type="button" className="close-btn" onClick={() => setShowRegisterDialog(false)}>
-              Cancelar
-            </button>
-            {message && <p>{message}</p>}
-          </form>
-        </dialog>
-      )}
-    </div>
+    <BookmarkContext.Provider value={{ bookmarks, toggleBookmark }}>
+      {children}
+    </BookmarkContext.Provider>
   );
 }
+
+
 
 function LangProvider({ children }) {
   const [language, setLanguage] = useState('es');
@@ -138,37 +132,43 @@ function useLang() {
   return useContext(LangContext);
 }
 
+function useBookmarks() {
+  return useContext(BookmarkContext);
+}
+
 function App() {
   return (
     <LangProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <header>
-            <div className="date-container">
-              <DateDisplay/>
-              <LanguageSelector />
-            </div>
+        <BookmarkProvider>
+          <BrowserRouter>
+            <header>
+              <div className="date-container">
+                <DateDisplay />
+                <LanguageSelector />
+              </div>
 
-            <div className="logo-container">
-              <img src="logo.jpg" alt="Website Logo" className="logo" />
-            </div>
-            <div className="header-right">
-              <RegisterComponent />
-            </div>
-            <nav>
-              <NavigationLinks />
-              <SearchComponent />
-              <ProfileComponent />
+              <div className="logo-container">
+                <img src="logo.jpg" alt="Website Logo" className="logo" />
+              </div>
+              <div className="header-right">
+                <RegisterComponent />
+              </div>
+              <nav>
+                <NavigationLinks />
+                <SearchComponent />
+                <ProfileComponent />
+              </nav>
+            </header>
 
-            </nav>
-          </header>
-
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/news/:id" element={<Article />} />
-            <Route path="/:category" element={<Category />} />
-          </Routes>
-        </BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/bookmarks" element={<Bookmarks />} />
+              <Route path="/news/:id" element={<Article />} />
+              <Route path="/:category" element={<Category />} />
+            </Routes>
+          </BrowserRouter>
+        </BookmarkProvider>
       </AuthProvider>
     </LangProvider>
   );
@@ -183,12 +183,9 @@ function DateDisplay() {
     year: 'numeric',
   }).format(today);
 
-  return (
-    <div className="date-display">
-      {formattedDate}
-    </div>
-  );
+  return <div className="date-display">{formattedDate}</div>;
 }
+
 function LanguageSelector() {
   const { language, changeLanguage } = useLang();
 
@@ -275,9 +272,53 @@ function SearchComponent() {
   );
 }
 
+function RegisterComponent() {
+  const { register } = useAuth();
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const username = e.target.username.value;
+    const password = e.target.password.value;
+
+    const result = register(username, password);
+    setMessage(result.message);
+
+    if (result.success) {
+      setShowRegisterDialog(false);
+    }
+  };
+
+  return (
+    <div className="register-container">
+      <button className="register-btn" onClick={() => setShowRegisterDialog(true)}>
+        Registrarse
+      </button>
+
+      {showRegisterDialog && (
+        <dialog open>
+          <form onSubmit={handleRegister}>
+            <h2>Registrarse</h2>
+            <input type="text" name="username" placeholder="Usuario" required />
+            <input type="password" name="password" placeholder="Contraseña" required />
+            <button type="submit">Registrar</button>
+            <button type="button" className="close-btn" onClick={() => setShowRegisterDialog(false)}>
+              Cancelar
+            </button>
+            {message && <p>{message}</p>}
+          </form>
+        </dialog>
+      )}
+    </div>
+  );
+}
 function ProfileComponent() {
   const { isLoggedIn, login, logout } = useAuth();
+  const { bookmarks } = useBookmarks();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const username = localStorage.getItem('user');
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -291,12 +332,63 @@ function ProfileComponent() {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    setShowProfileMenu(false);
+  };
+
   return (
     <div className="profile-container">
       {isLoggedIn ? (
-        <button className="logout-btn" onClick={logout}>
-          Cerrar sesión
-        </button>
+        <div>
+          <button className="profile-btn" onClick={() => setShowProfileMenu(!showProfileMenu)}>
+          <svg 
+    id="Icons_User" 
+    overflow="hidden" 
+    version="1.1" 
+    viewBox="0 0 96 96" 
+    xmlns="http://www.w3.org/2000/svg" 
+    xmlnsXlink="http://www.w3.org/1999/xlink" // Nota: JSX usa `xmlnsXlink` en lugar de `xmlns:xlink`.
+    width="24" // Tamaño del icono ajustable
+    height="24"
+  >
+    <g>
+      <circle cx="48" cy="30" r="16" />
+      <path 
+        d="M 80 82 L 80 66 C 80 63.6 78.8 61.2 76.8 59.6 C 72.4 56 66.8 53.6 61.2 52 C 57.2 50.8 52.8 50 48 50 C 43.6 50 39.2 50.8 34.8 52 C 29.2 53.6 23.6 56.4 19.2 59.6 C 17.2 61.2 16 63.6 16 66 L 16 82 L 80 82 Z"
+      />
+    </g>
+  </svg>
+          </button>
+          {showProfileMenu && (
+            <div className="profile-menu">
+              <div className="profile-header">
+                <h3>Hola, {username}</h3>
+                <button className="logout-btn" onClick={handleLogout}>
+                  Cerrar sesión
+                </button>
+              </div>
+              <div className="profile-bookmarks">
+                <h4>Tus favoritos ⭐</h4>
+                {bookmarks.length > 0 ? (
+                  <div className="bookmarks-grid">
+                    {bookmarks.map((article) => (
+                      <div key={article.id} className="bookmark-card">
+                        <Link to={`/news/${article.id}`} onClick={() => setShowProfileMenu(false)}>
+                          <img src={article.image_url} alt={article.headline} />
+                          <h5>{article.headline}</h5>
+                          <p>{article.abstract.slice(0, 50)}...</p>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No tienes artículos favoritos.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <button className="login-btn" onClick={() => setShowLoginDialog(true)}>
@@ -325,6 +417,7 @@ function ProfileComponent() {
 
 function Home() {
   const { language } = useLang();
+  const { bookmarks, toggleBookmark } = useBookmarks();
   const [articles, setArticles] = useState([]);
 
   useEffect(() => {
@@ -335,16 +428,22 @@ function Home() {
 
   return (
     <div className="news-grid">
-      {articles.map(article => (
-        <div key={article.id} className="news-card">
-          <img src={article.image_url} alt={article.headline} />
-          <Link to={`/news/${article.id}`}>
-            <h2>{article.translations[language]?.headline || article.headline}</h2>
-            <p>{article.translations[language]?.abstract || article.abstract}</p>
-            <time dateTime={article.date}>{new Date(article.date).toLocaleDateString()}</time>
-          </Link>
-        </div>
-      ))}
+      {articles.map(article => {
+        const isBookmarked = bookmarks.some((item) => item.id === article.id);
+        return (
+          <div key={article.id} className="news-card">
+            <img src={article.image_url} alt={article.headline} />
+            <Link to={`/news/${article.id}`}>
+              <h2>{article.translations[language]?.headline || article.headline}</h2>
+              <p>{article.translations[language]?.abstract || article.abstract}</p>
+              <time dateTime={article.date}>{new Date(article.date).toLocaleDateString()}</time>
+            </Link>
+            <button onClick={() => toggleBookmark(article)}>
+              {isBookmarked ? "⭐" : " Agregar a Favoritos ☆"}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -352,6 +451,7 @@ function Home() {
 function Article() {
   const { id } = useParams();
   const { language } = useLang();
+  const { bookmarks, toggleBookmark } = useBookmarks();
   const { isLoggedIn } = useAuth();
   const [article, setArticle] = useState(null);
 
@@ -366,6 +466,7 @@ function Article() {
   const { headline, abstract, body, date, author, translations } = article;
   const localizedHeadline = translations[language]?.headline || headline;
   const localizedBody = translations[language]?.body || body;
+  const isBookmarked = bookmarks.some((item) => item.id === article.id);
 
   return (
     <custom-article>
@@ -374,6 +475,9 @@ function Article() {
         <h1>{localizedHeadline}</h1>
         <p><strong>Autor: </strong> {author}</p>
         <time dateTime={date}><strong>Publicado en: </strong> {new Date(date).toLocaleDateString()}</time>
+        <button onClick={() => toggleBookmark(article)}>
+          {isBookmarked ? "⭐" : " Agregar a Favoritos ☆"}
+        </button>
         {isLoggedIn ? (
           <div dangerouslySetInnerHTML={{ __html: localizedBody }}></div>
         ) : (
@@ -387,9 +491,29 @@ function Article() {
   );
 }
 
+function Bookmarks() {
+  const { bookmarks } = useBookmarks();
+
+  if (!bookmarks.length) return <p>No tienes artículos en favoritos.</p>;
+
+  return (
+    <div className="news-grid">
+      {bookmarks.map(article => (
+        <div key={article.id} className="news-card">
+          <Link to={`/news/${article.id}`}>
+            <img src={article.image_url} alt={article.headline} />
+            <h2>{article.headline}</h2>
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Category() {
   const { language } = useLang();
   const { category } = useParams();
+  const { bookmarks, toggleBookmark } = useBookmarks();
   const [articles, setArticles] = useState([]);
 
   useEffect(() => {
@@ -402,16 +526,22 @@ function Category() {
 
   return (
     <div className="news-grid">
-      {articles.map(article => (
-        <div key={article.id} className="news-card">
-          <Link to={`/news/${article.id}`}>
-            <img src={article.image_url} alt={article.headline} />
-            <h2>{article.translations[language]?.headline || article.headline}</h2>
-            <p>{article.translations[language]?.abstract || article.abstract}</p>
-            <time dateTime={article.date}>{new Date(article.date).toLocaleDateString()}</time>
-          </Link>
-        </div>
-      ))}
+      {articles.map(article => {
+        const isBookmarked = bookmarks.some((item) => item.id === article.id);
+        return (
+          <div key={article.id} className="news-card">
+            <Link to={`/news/${article.id}`}>
+              <img src={article.image_url} alt={article.headline} />
+              <h2>{article.translations[language]?.headline || article.headline}</h2>
+              <p>{article.translations[language]?.abstract || article.abstract}</p>
+              <time dateTime={article.date}>{new Date(article.date).toLocaleDateString()}</time>
+            </Link>
+            <button onClick={() => toggleBookmark(article)}>
+              {isBookmarked ? "⭐" : "Agregar a favoritos ☆"}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
