@@ -72,7 +72,8 @@ function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}function BookmarkProvider({ children }) {
+}
+function BookmarkProvider({ children }) {
   const { isLoggedIn } = useAuth();
   const [bookmarks, setBookmarks] = useState([]);
 
@@ -86,15 +87,15 @@ function AuthProvider({ children }) {
     }
   }, [isLoggedIn]);
 
-  const toggleBookmark = (articleId) => {
+  const toggleBookmark = (article) => {
     const user = localStorage.getItem('user');
     if (!user) return;
 
     setBookmarks((prev) => {
-      const isBookmarked = prev.includes(articleId);
+      const isBookmarked = prev.some((item) => item.id === article.id);
       const updatedBookmarks = isBookmarked
-        ? prev.filter((id) => id !== articleId)
-        : [...prev, articleId];
+        ? prev.filter((item) => item.id !== article.id)
+        : [...prev, article];
 
       localStorage.setItem(`bookmarks_${user}`, JSON.stringify(updatedBookmarks));
       return updatedBookmarks;
@@ -107,7 +108,6 @@ function AuthProvider({ children }) {
     </BookmarkContext.Provider>
   );
 }
-
 
 
 function LangProvider({ children }) {
@@ -312,8 +312,7 @@ function RegisterComponent() {
       )}
     </div>
   );
-}
-function ProfileComponent() {
+}function ProfileComponent() {
   const { isLoggedIn, login, logout } = useAuth();
   const { bookmarks } = useBookmarks();
   const [showLoginDialog, setShowLoginDialog] = useState(false);
