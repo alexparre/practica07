@@ -94,6 +94,8 @@ function App() {
               <NavigationLinks />
               <SearchComponent />
               <ProfileComponent />
+              <LanguageSelector />
+
             </nav>
           </header>
 
@@ -105,6 +107,19 @@ function App() {
         </BrowserRouter>
       </AuthProvider>
     </LangProvider>
+  );
+}
+function LanguageSelector() {
+  const { language, changeLanguage } = useLang();
+
+  return (
+    <div className="language-selector">
+      <select value={language} onChange={(e) => changeLanguage(e.target.value)}>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
   );
 }
 
