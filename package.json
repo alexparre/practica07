@@ -1,7 +1,7 @@
 {
   "name": "practica07",
   "homepage": "https://alexparre.github.io/practica07",
-  "private": true,
+  "private": true, 
   "version": "0.0.0",
   "type": "module",
   "scripts": {
